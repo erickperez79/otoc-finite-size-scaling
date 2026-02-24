@@ -2,7 +2,7 @@
 
 **Finite-Size Recurrences, System-Size Scaling, and Validation on IBM Quantum Hardware**
 
-**Author:** Erick Francisco Pérez Eugenio  
+**Author:** Erick Francisco Perez Eugenio  
 **ORCID:** [0009-0006-3228-4847](https://orcid.org/0009-0006-3228-4847)  
 **Contact:** erick.fpe79@gmail.com
 
@@ -95,7 +95,7 @@ If you use this code or data, please cite:
 
 ```bibtex
 @article{PerezEugenio2026otoc,
-  author = {P\'erez Eugenio, Erick Francisco},
+  author = {Perez Eugenio, Erick Francisco},
   title = {Probing Quantum Scrambling via OTOCs in Digital Circuits:
            Finite-Size Recurrences, System-Size Scaling,
            and Validation on IBM Quantum Hardware},
