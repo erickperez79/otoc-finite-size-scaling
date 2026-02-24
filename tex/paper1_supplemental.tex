@@ -1,0 +1,330 @@
+% paper1_supplemental.tex — Supplemental Material for Paper 1
+% Compile separately or append after \end{document} of main paper
+\documentclass[aps,pra,twocolumn,superscriptaddress]{revtex4-2}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{hyperref}
+\usepackage{url}
+
+\begin{document}
+
+\title{Supplemental Material for:\\
+Probing Quantum Scrambling via OTOCs in Digital Circuits}
+\author{Erick Francisco P\'erez Eugenio}
+\email{erick.fpe79@gmail.com}
+\affiliation{Independent Researcher,
+  ORCID: \href{https://orcid.org/0009-0006-3228-4847}{0009-0006-3228-4847}}
+\date{February 2026}
+
+\maketitle
+
+%=================================================================
+\section{IBM Quantum Hardware Details}
+%=================================================================
+
+All hardware experiments were performed on \texttt{ibm\_marrakesh},
+a 156-qubit Heron processor accessed via IBM Quantum Platform.
+Table~\ref{tab:hw_params} summarizes the hardware parameters at the
+time of execution.
+
+\begin{table}[h]
+\caption{Hardware parameters for \texttt{ibm\_marrakesh}.}
+\label{tab:hw_params}
+\begin{ruledtabular}
+\begin{tabular}{lc}
+Parameter & Value \\
+\hline
+Processor & Heron \\
+Total qubits & 156 \\
+Median $T_1$ ($\mu$s) & $\sim$250 \\
+Median $T_2$ ($\mu$s) & $\sim$150 \\
+Median 2Q gate error & $\sim$0.8\% \\
+Median readout error & $\sim$1.5\% \\
+Qiskit version & 2.3.0 \\
+Primitive & Sampler (V2) \\
+Shots per circuit & 4096 \\
+Runs per configuration & 5 \\
+Optimization level & 3 \\
+\end{tabular}
+\end{ruledtabular}
+\end{table}
+
+Qubit selection was automatic via Qiskit transpilation. No manual
+qubit mapping or routing optimization was applied. All circuits
+used the native gate set of the Heron processor (CZ, RZ, SX, X).
+
+%=================================================================
+\section{Circuit Structure}
+%=================================================================
+
+Each OTOC measurement consists of the following steps:
+
+\begin{enumerate}
+\item \textbf{State preparation:} Apply $X$ and $H$ to qubit 0,
+  preparing $|\psi_0\rangle = |{-}\rangle \otimes |0\rangle^{\otimes (N-1)}$.
+\item \textbf{Forward evolution:} Apply $d$ layers of the Floquet
+  circuit $U_F = U_{\text{kick}} \cdot U_{\text{Ising}}$.
+\item \textbf{Perturbation:} Apply $X$ to qubit 0 (butterfly operator).
+\item \textbf{Backward evolution:} Apply $d$ layers of $U_F^\dagger$.
+\item \textbf{Measurement:} Measure qubit 0 in the $Z$ basis.
+\end{enumerate}
+
+The OTOC signal is extracted as $C(d) = P_0(d)$, the probability of
+measuring $|0\rangle$ on qubit~0. Equivalently, $C(d) = 1 - P_1(d)$.
+For a perfect echo ($d = 0$), $C(0) = |\langle 0|-\rangle|^2 = 1/2$
+exactly, since the butterfly $X_0$ acts as a global phase on $|-\rangle$.
+
+For each depth $d$, a reference circuit without the butterfly operator
+is also run to verify protocol integrity.
+
+The circuit depth (number of two-qubit gates) scales as:
+\begin{itemize}
+\item $d$ layers forward: $d \times (N - 1)$ CNOT equivalents for Ising,
+  plus $N$ single-qubit gates for kick.
+\item $d$ layers backward: identical count.
+\item Total two-qubit gates: $\approx 2d(N-1)$.
+\end{itemize}
+
+For $N = 20$, $d = 7$: total $\approx 266$ two-qubit gates, well beyond
+the coherence limit for faithful state evolution.
+
+%=================================================================
+\section{Model Parameters}
+%=================================================================
+
+Table~\ref{tab:model_params} lists the parameters used for each model.
+
+\begin{table}[h]
+\caption{Model parameters used in all simulations and experiments.}
+\label{tab:model_params}
+\begin{ruledtabular}
+\begin{tabular}{lcc}
+Model & Parameters & Notes \\
+\hline
+Kicked Ising & $J = 0.9$, $h = 0.7$ & Chaotic, PBC \\
+Integrable & H + CNOT layers & Clifford, OBC \\
+Floquet & $\theta = 0.8$, $\phi = 1.2$, $J = 0.9$ & Prethermal, PBC \\
+SYK & $J_{ij} \sim U[0.5,1.5]$ & 50 seeds (exact), 9 (IBM) \\
+\end{tabular}
+\end{ruledtabular}
+\end{table}
+
+For the Kicked Ising model, the Floquet operator is:
+\begin{equation}
+U_F = \exp\!\left(-i h \sum_j X_j\right)
+      \exp\!\left(-i J \sum_j Z_j Z_{j+1}\right)
+\end{equation}
+with periodic boundary conditions ($Z_{N+1} \equiv Z_1$).
+
+For the Floquet prethermal model, each layer consists of $RX(2\theta)$
+and $RY(2\phi)$ rotations on all qubits, $RZZ(2J)$ coupling on
+nearest neighbors with periodic boundary conditions, and $CZ$ gates
+on even-indexed pairs, with parameters $\theta = 0.8$, $\phi = 1.2$,
+$J = 0.9$.
+
+For the SYK-inspired model at $N = 4$, the Hamiltonian consists of
+random all-to-all $ZZ$ couplings:
+\begin{equation}
+H_{\text{SYK}} = \sum_{i<j} J_{ij}\, Z_i Z_j
+\end{equation}
+where $J_{ij}$ are drawn independently from a uniform distribution on
+$[0.5, 1.5]$. Each disorder realization uses a different set of
+couplings. Time evolution is $U(t) = e^{-iH_{\text{SYK}} t}$ with
+$t = 1$ per Floquet step.
+
+%=================================================================
+\section{IBM Quantum Job Inventory}
+%=================================================================
+
+A total of 40 jobs were submitted to \texttt{ibm\_marrakesh} between
+February 12--14, 2026. Table~\ref{tab:jobs} provides a summary by
+model and system size.
+
+\begin{table}[h]
+\caption{Job summary by model and configuration.}
+\label{tab:jobs}
+\begin{ruledtabular}
+\begin{tabular}{lcccr}
+Model & $N$ & Runs & Depths & Points \\
+\hline
+Kicked Ising & 4  & 5 & 11 & 55 \\
+Kicked Ising & 8  & 5 & 11 & 55 \\
+Kicked Ising & 12 & 5 & 11 & 55 \\
+Kicked Ising & 20 & 5 & 11 & 55 \\
+Integrable   & 4  & 5 & 11 & 55 \\
+Floquet      & 4  & 5 & 11 & 55 \\
+SYK          & 4  & 9 seeds & 11 & 99 \\
+\hline
+\textbf{Total} & & & & \textbf{429} \\
+\end{tabular}
+\end{ruledtabular}
+\end{table}
+
+Depths measured: $d \in \{1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14\}$ for
+all configurations (11 data depths per run, plus $d = 0$
+normalization reference).
+
+Full job IDs are available in the data repository.
+
+%=================================================================
+\section{Exact Simulation Details}
+%=================================================================
+
+All exact simulations used statevector evolution (no sampling noise,
+no approximation). The simulation computes the full $2^N$-dimensional
+state vector at each Floquet step.
+
+\begin{table}[h]
+\caption{Exact simulation inventory.}
+\label{tab:exact_inv}
+\begin{ruledtabular}
+\begin{tabular}{lccr}
+Model & $N$ & Depths & Points \\
+\hline
+Kicked Ising & 4, 8, 12, 20 & 11 each & 44 \\
+Integrable   & 4 & 11 & 11 \\
+Floquet      & 4 & 11 & 11 \\
+SYK (50 seeds) & 4 & 11 each & 550 \\
+\hline
+\textbf{Total} & & & \textbf{616} \\
+\end{tabular}
+\end{ruledtabular}
+\end{table}
+
+For $N = 20$, the Hilbert space dimension is $2^{20} = 1{,}048{,}576$.
+Each Floquet step requires multiplication of the state vector by two
+unitary matrices (Ising and kick), implemented as sparse matrix
+operations. Total computation time: $\sim$30 minutes on Google Colab
+(single CPU).
+
+The Lyapunov exponent $\lambda_L = 3.12 \pm 0.1$ was extracted by
+fitting $\ln C(d)$ vs $d$ for $d = 2$--$10$ at $N = 20$, excluding
+$d = 0$ (normalization) and $d = 1$ (pre-scrambling, identical across
+all $N$ due to locality).
+
+%=================================================================
+\section{Noise Floor Analysis}
+%=================================================================
+
+The hardware noise floor for each $N$ was estimated as the mean of
+$C(d)$ for depths $d \geq 6$, where the exact signal has decayed
+significantly.
+
+\begin{table}[h]
+\caption{Noise floor estimates.}
+\label{tab:noise}
+\begin{ruledtabular}
+\begin{tabular}{cccc}
+$N$ & $\langle C \rangle_{\text{IBM}}^{d \geq 6}$
+    & $1/2^N$ & Ratio \\
+\hline
+4  & 0.059   & 0.0625 & 0.9$\times$ \\
+8  & 0.005   & 0.0039 & 1.3$\times$ \\
+12 & 0.0005  & 0.00024 & 1.9$\times$ \\
+20 & $<$0.0001 & 0.000001 & --- \\
+\end{tabular}
+\end{ruledtabular}
+\end{table}
+
+The noise floor is consistent with depolarization toward the maximally
+mixed state, for which $C = 0$ (each qubit equally likely to be
+$|0\rangle$ or $|1\rangle$). The scaling $\sim 1.5/2^N$ reflects the
+exponential suppression of any residual coherence with system size.
+
+For $N = 20$, the shot noise floor ($1/\sqrt{4096} \approx 0.016$)
+exceeds any possible signal beyond $d = 2$. This means IBM returns
+$C \approx 0$ by decoherence, while exact simulation gives
+$C \approx 0$ by scrambling---the same qualitative result via
+different mechanisms.
+
+%=================================================================
+\section{SYK Convergence Data}
+%=================================================================
+
+Table~\ref{tab:syk_conv_full} shows the convergence of the
+disorder-averaged OTOC statistics with the number of seeds.
+
+\begin{table}[h]
+\caption{SYK $N = 4$ convergence with number of disorder realizations.}
+\label{tab:syk_conv_full}
+\begin{ruledtabular}
+\begin{tabular}{rcccc}
+Seeds & $\Omega$ & $R^2_{\text{exp}}$ & $R^2_{\text{pow}}$ & $\Delta\Omega$ \\
+\hline
+1  & 0.342 & 0.15 & 0.22 & +97\% \\
+3  & 0.253 & 0.41 & 0.55 & +46\% \\
+5  & 0.203 & 0.52 & 0.72 & +17\% \\
+9  & 0.179 & 0.58 & 0.85 & +3.4\% \\
+15 & 0.164 & 0.60 & 0.89 & $-$5\% \\
+25 & 0.170 & 0.61 & 0.90 & $-$2\% \\
+50 & 0.173 & 0.61 & 0.91 & --- \\
+\end{tabular}
+\end{ruledtabular}
+\end{table}
+
+Individual seed statistics (50 seeds): median $R^2_{\text{exp}} = 0.27$,
+mean $= 0.35$, only 2/50 with $R^2 > 0.9$. The exponential model is
+not intrinsic to individual SYK realizations at $N = 4$.
+
+%=================================================================
+\section{Scrambling Residual $\Omega$ — Full Data}
+%=================================================================
+
+\begin{table}[h]
+\caption{Complete $\Omega$ values for all models and system sizes.}
+\label{tab:omega_full}
+\begin{ruledtabular}
+\begin{tabular}{lccc}
+Model & $\Omega_{\text{exact}}$ & $\Omega_{\text{IBM}}$ & $|\Delta\Omega|$ \\
+\hline
+KI $N=4$     & 0.136 & 0.133 & 0.003 \\
+KI $N=8$     & 0.009 & 0.016 & 0.007 \\
+KI $N=12$    & 0.006 & 0.007 & 0.001 \\
+KI $N=20$    & 0.005 & 0.004 & 0.001 \\
+Integrable $N=4$ & 0.727 & 0.726 & 0.001 \\
+Floquet $N=4$    & 0.357 & 0.268 & 0.089 \\
+SYK $N=4$ (9s)   & 0.179 & 0.180 & 0.001 \\
+SYK $N=4$ (50s)  & 0.173 & --- & --- \\
+\end{tabular}
+\end{ruledtabular}
+\end{table}
+
+The maximum discrepancy $|\Delta\Omega| = 0.089$ occurs for the
+Floquet model, attributable to decoherence at deep circuits where
+the near-integrable dynamics produce slow decay.
+
+%=================================================================
+\section{Code and Data Availability}
+%=================================================================
+
+All simulation code is written in Python using:
+\begin{itemize}
+\item \texttt{numpy} and \texttt{scipy} for exact statevector evolution
+\item \texttt{qiskit} 2.3.0 for circuit construction and IBM execution
+\item \texttt{matplotlib} for figure generation
+\end{itemize}
+
+The complete codebase, raw data (JSON format), and figure-generation
+scripts are available at
+\url{https://github.com/ErickPerez79/otoc-finite-size-scaling}
+and archived on Zenodo (DOI to be assigned upon publication).
+The repository includes:
+
+\begin{itemize}
+\item \texttt{paper1\_analisis\_ibm\_v1.py}: IBM data collection,
+  exact statevector simulation, and full experimental protocol.
+\item \texttt{paper1\_figuras.py}: Data recovery, comparison with
+  exact simulation, statistical analysis, and figure generation.
+\item \texttt{paper1\_raw\_data.json}: 616 exact simulation data points
+  (all models, all $N$).
+\item \texttt{paper1\_recovered\_ibm\_data.json}: 429 IBM experimental
+  data points with run-level statistics and full count distributions.
+\item \texttt{README.md}: Reproduction instructions for all figures
+  and tables.
+\end{itemize}
+
+\bibliography{kaelion}
+
+\end{document}

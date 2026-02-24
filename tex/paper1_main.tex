@@ -1,0 +1,587 @@
+\documentclass[twocolumn,preprintnumbers,amsmath,amssymb,pra]{revtex4-2}
+\usepackage{graphicx,amsmath,amssymb,hyperref,xcolor,booktabs}
+\begin{document}
+% \preprint{}
+
+\title{Probing Quantum Scrambling via OTOCs in Digital Circuits:\\
+  Finite-Size Recurrences, System-Size Scaling,\\
+  and Validation on IBM Quantum Hardware}
+
+\author{Erick Francisco P\'erez Eugenio}
+\email{erick.fpe79@gmail.com}
+\affiliation{Independent Researcher,
+  ORCID: \href{https://orcid.org/0009-0006-3228-4847}{0009-0006-3228-4847}}
+\date{February 2026}
+
+\begin{abstract}
+We study quantum scrambling via out-of-time-ordered correlators (OTOCs)
+in the Kicked Ising model across system sizes $N = 4, 8, 12, 20$,
+combining exact statevector simulation with experiments on IBM Quantum
+hardware (ibm\_marrakesh, 156 qubits). At $N = 4$ (Hilbert space
+dimension~16), quantum recurrences completely prevent exponential OTOC
+decay ($R^2 \approx 0$); remarkably, these recurrences---including a
+prominent revival at depth $d = 4$---are directly observed on hardware
+(Pearson $r = 0.91$ between exact and experimental patterns). As $N$
+increases, recurrences are exponentially suppressed: exact simulation at
+$N = 20$ reveals clean exponential decay over more than 10 orders of magnitude
+($R^2 = 0.97$, $\lambda_L = 3.12 \pm 0.1$). Hardware experiments
+confirm the monotonic decrease of scrambling residual $\Omega$ with $N$,
+and reproduce integrable (Clifford) circuit patterns with absolute error $< 0.02$.
+We compare four models---Kicked Ising, integrable, Floquet prethermal,
+and disorder-averaged SYK---establishing that OTOCs reliably distinguish
+dynamical regimes at all system sizes, but Lyapunov exponent extraction
+requires $N \gg 4$. These results provide concrete benchmarks for
+NISQ-era scrambling experiments.
+\end{abstract}
+\maketitle
+
+%=================================================================
+\section{Introduction}\label{sec:intro}
+%=================================================================
+
+Quantum scrambling---the delocalization of initially localized quantum
+information across a system's degrees of freedom---connects quantum
+chaos, black hole physics, and quantum information theory
+\cite{Maldacena2016,Swingle2018,XuSwingle2024}. The OTOC provides the
+standard quantitative probe: in chaotic systems with a semiclassical
+limit, $C(t) \sim e^{-\lambda_L t}$, where $\lambda_L$ is the quantum
+Lyapunov exponent, bounded by $\lambda_L \leq 2\pi T$ (the MSS bound)
+\cite{Maldacena2016}.
+
+The Kicked Ising model is a paradigmatic example of many-body quantum
+chaos \cite{BertiniKosProsen2018,BertiniKosProsen2019}, and its
+dual-unitary limit admits exact analytical results. However, Craps
+et~al.\ \cite{Craps2020} showed that spin-1/2 chains present a
+fundamental challenge: the OTOC saturates before exponential growth
+manifests, with the exponential window opening only at higher spin.
+
+We address the complementary question: for fixed spin $s = 1/2$, how
+does the number of sites $N$ control the observability of exponential
+OTOC decay? This question has acquired practical urgency with the
+recent demonstration of OTOC(2) measurements on 65 qubits by Google
+Quantum AI \cite{GoogleEchoes2025} and earlier experimental OTOC
+measurements on superconducting hardware \cite{Braumueller2022}.
+Our approach combines exact statevector simulation (up to
+$N = 20$, dimension $\sim 10^6$) with experiments on IBM Quantum
+hardware (ibm\_marrakesh, 156 superconducting qubits).
+
+Our central findings are: (i)~quantum Poincar\'e recurrences, not
+decoherence, are the limiting factor for OTOC-based scrambling
+measurement at small $N$; (ii)~these recurrences are directly observable
+on current hardware; (iii)~exponential decay emerges cleanly at $N = 20$
+in exact simulation; and (iv)~hardware experiments validate the exact
+simulations wherever signal exceeds the noise floor.
+
+
+%=================================================================
+\section{OTOC Protocol and Diagnostics}\label{sec:otoc}
+%=================================================================
+
+We use the forward-backward OTOC protocol. Define the echo state
+\begin{equation}
+  |\phi(d)\rangle = U_F^{-d}\,X_0\,U_F^d\,|\psi_0\rangle,
+  \label{eq:echo}
+\end{equation}
+where $X_0$ is the butterfly (Pauli-$X$ on qubit~0) and $U_F$ is the
+Floquet operator. The OTOC signal is defined as
+\begin{equation}
+  C(d) = \langle\phi(d)|\,P_0\,|\phi(d)\rangle,
+  \label{eq:Cd}
+\end{equation}
+where $P_0 = |0\rangle\langle 0|_0 \otimes \mathbb{1}$ is the
+projector onto $|0\rangle$ on qubit~0. In practice, $C(d)$ is the
+probability of outcome $|0\rangle$ when measuring $Z_0$ after the
+echo circuit. With initial state $|\psi_0\rangle = |-\rangle\otimes
+|0\rangle^{\otimes(N-1)}$, the butterfly acts as $X_0|-\rangle =
+-|-\rangle$, giving $C(0) = |\langle 0|-\rangle|^2 = 1/2$ exactly.
+Here $d$ is the circuit depth (number of Floquet steps).
+
+\subsection{Scrambling residual}
+
+To characterize the overall degree of scrambling, we define the
+\emph{scrambling residual}:
+\begin{equation}
+  \Omega \equiv \frac{\langle C(d) \rangle_d}{C(0)},
+\end{equation}
+where $\langle \cdot \rangle_d$ denotes the arithmetic mean over all
+measured depths $d \geq 1$. The residual satisfies $\Omega \in [0, 1]$:
+$\Omega = 0$ for complete scrambling and $\Omega = 1$ for no scrambling.
+This provides a single-number diagnostic that is robust against
+shot noise and does not require fitting assumptions.
+
+\subsection{Finite-size recurrences}
+
+The Poincar\'e recurrence time scales as $\tau_P \sim 2^N$. For $N = 4$
+($2^N = 16$), recurrences occur within a few Floquet steps. For
+$N = 20$ ($2^N \sim 10^6$), they are negligible at accessible depths.
+
+
+%=================================================================
+\section{Models}\label{sec:models}
+%=================================================================
+
+We study four circuit models spanning distinct dynamical regimes.
+
+\textbf{Kicked Ising} (chaotic):
+$U_F = e^{-ih\sum_i X_i}\,e^{-iJ\sum_i Z_iZ_{i+1}}$
+with $J = 0.9$, $h = 0.7$, periodic boundary conditions
+($Z_{N+1} \equiv Z_1$). This lies
+14.6\% above the dual-unitary point $J = \pi/4$
+\cite{BertiniKosProsen2019}.
+
+\textbf{Integrable} (Clifford):
+$U_F = \prod_i \text{CNOT}_{i,i+1} \cdot \prod_i H_i$.
+
+\textbf{Floquet prethermal}:
+$RX$--$RY$ rotations, $RZZ$ coupling, and $CZ$ entangling layers
+with $\theta = 0.8$, $\phi = 1.2$, $J = 0.9$.
+
+\textbf{SYK-inspired} (disorder-averaged):
+Random all-to-all $ZZ$ couplings in $[0.5, 1.5]$, averaged over
+50 disorder realizations (exact simulation) or 9 realizations (hardware).
+
+
+%=================================================================
+\section{Exact Simulation Results}\label{sec:exact}
+%=================================================================
+
+All exact simulations use statevector evolution with complexity
+$O(2^N)$ per gate. For all models, $C(0) = 0.500000$ to machine
+precision ($< 10^{-10}$).
+
+\subsection{$N = 4$: Recurrence-dominated dynamics}
+
+Table~\ref{tab:N4} shows $C(d)$ for all four models at $N = 4$.
+The Kicked Ising values oscillate erratically between $10^{-4}$ and
+$0.24$, with a prominent recurrence at $d = 4$ ($C = 0.243$) and
+$d = 12$ ($C = 0.213$). No exponential fit is meaningful ($R^2
+\approx 0$). The integrable circuit shows perfect periodicity, and
+the Floquet model oscillates similarly to the Kicked Ising---at
+$N = 4$, these are indistinguishable by any OTOC diagnostic.
+Figure~\ref{fig:allmodels} shows the comparison between exact
+simulation and IBM hardware for all four models.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig1_otoc_all_models.png}
+\caption{OTOC $C(d)$ for all four models at $N = 4$. (a)~Kicked Ising:
+  erratic oscillations from quantum recurrences; IBM (red squares, 5-run
+  average with error bars) reproduces the pattern with Pearson $r = 0.91$.
+  (b)~Integrable (Clifford): perfect periodicity reproduced by IBM with
+  error $< 0.02$. (c)~Floquet: oscillations correlated with exact
+  simulation ($r = 0.96$). (d)~SYK: disorder averaging over 9 hardware
+  realizations (black squares) suppresses recurrences visible in
+  individual seeds (gray).}
+\label{fig:allmodels}
+\end{figure*}
+
+\begin{table}[h]
+\caption{$C(d)$ at $N = 4$ (exact simulation). SYK: 50-seed average.}
+\label{tab:N4}
+\begin{ruledtabular}
+\begin{tabular}{rcccc}
+$d$ & KI & Integ. & Floquet & SYK \\
+\hline
+1  & 0.014 & 0.000 & 0.000 & 0.234 \\
+2  & 0.013 & 0.500 & 0.342 & 0.121 \\
+3  & 0.048 & 0.500 & 0.261 & 0.076 \\
+4  & 0.243 & 0.500 & 0.251 & 0.077 \\
+5  & 0.077 & 0.000 & 0.200 & 0.082 \\
+6  & 0.019 & 0.500 & 0.376 & 0.066 \\
+7  & 0.088 & 0.000 & 0.116 & 0.059 \\
+8  & 0.000 & 0.500 & 0.040 & 0.065 \\
+10 & 0.025 & 0.500 & 0.062 & 0.055 \\
+12 & 0.213 & 0.500 & 0.151 & 0.061 \\
+14 & 0.007 & 0.500 & 0.163 & 0.058 \\
+\end{tabular}
+\end{ruledtabular}
+\end{table}
+
+\subsection{Scaling from $N = 4$ to $N = 20$}
+
+Table~\ref{tab:scaling} shows the dramatic effect of system size on
+Kicked Ising OTOCs. Three features emerge:
+
+\textbf{(i) Locality:} $C(1)$ and $C(2)$ are identical for all $N$ to
+machine precision---the first two Floquet steps affect only local qubits,
+and the perturbation has not reached the far boundary.
+
+\textbf{(ii) Convergence:} For $d = 3$--$6$, values at $N \geq 8$
+agree, while $N = 4$ differs by orders of magnitude, marking the onset
+of finite-size effects.
+
+\textbf{(iii) Exponential decay at $N = 20$:} $C(d)$ decreases
+monotonically from $1.3 \times 10^{-2}$ to $2.3 \times 10^{-13}$---a
+span of more than 10 orders of magnitude---before the first (amplitude
+$\sim 10^{-12}$) recurrence at $d = 12$. A log-linear fit over
+$d = 2$--$10$ yields:
+\begin{equation}
+  \lambda_L = 3.12 \pm 0.1, \quad R^2 = 0.973,
+  \label{eq:lambda_N20}
+\end{equation}
+compared to a power-law fit $R^2 = 0.926$.
+
+\begin{table}[h]
+\caption{Kicked Ising $C(d)$ vs system size (exact simulation).}
+\label{tab:scaling}
+\begin{ruledtabular}
+\begin{tabular}{rcccc}
+$d$ & $N\!=\!4$ & $N\!=\!8$ & $N\!=\!12$ & $N\!=\!20$ \\
+\hline
+1  & 1.4e-2 & 1.4e-2 & 1.4e-2 & 1.4e-2 \\
+2  & 1.3e-2 & 1.3e-2 & 1.3e-2 & 1.3e-2 \\
+3  & 4.8e-2 & 3.6e-5 & 3.6e-5 & 3.6e-5 \\
+4  & 2.4e-1 & 2.3e-5 & 2.3e-5 & 2.3e-5 \\
+5  & 7.7e-2 & 4.1e-6 & 1.5e-6 & 1.5e-6 \\
+6  & 1.9e-2 & 1.1e-3 & 8.9e-8 & 8.9e-8 \\
+7  & 8.8e-2 & 1.3e-2 & 2.5e-7 & 2.1e-10 \\
+8  & 1.8e-4 & 6.2e-3 & 2.3e-6 & 1.2e-11 \\
+10 & 2.5e-2 & 9.9e-3 & 3.0e-4 & 2.3e-13 \\
+12 & 2.1e-1 & 6.7e-5 & 6.4e-3 & 1.6e-12 \\
+14 & 6.9e-3 & 7.7e-4 & 3.4e-3 & 6.4e-10 \\
+\end{tabular}
+\end{ruledtabular}
+\end{table}
+
+The recurrence onset depth $d^*$ scales approximately as $d^* \sim
+N/v_B$, where $v_B$ is the butterfly velocity: $d^* \approx 3$ ($N=4$),
+$\approx 7$ ($N=8$), $\approx 10$ ($N=12$), and $\geq 12$ ($N=20$).
+Figure~\ref{fig:scaling} shows the IBM data on a logarithmic scale
+alongside the exact simulation lines, and the convergence of $\Omega$
+with system size.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig2_scaling_N.png}
+\caption{Kicked Ising scaling with system size. (a)~$C(d)$ vs depth on
+  logarithmic scale for IBM data (symbols with error bars) overlaid on
+  exact simulation (lines) at $N = 4, 8, 12, 20$. The signal drops
+  monotonically faster with increasing $N$. (b)~Scrambling residual
+  $\Omega$ vs $N$: both exact (black) and IBM (blue) show convergence
+  toward complete scrambling, with a $\sim 1/2^N$ guide (dashed).}
+\label{fig:scaling}
+\end{figure*}
+
+We note that $\lambda_L = 3.12 \approx \pi$. An independent calculation
+of $T_\text{eff}$ via first-order Magnus expansion of the Floquet
+operator yields a \emph{negative} effective temperature ($\beta =
+-0.52$), as the initial state lies in the upper portion of the
+effective Hamiltonian spectrum. This rules out MSS saturation as the
+explanation. The Magnus expansion is, moreover, unreliable at these
+coupling strengths (second-order corrections are 156\% of the
+first-order term). We record this numerical coincidence without
+claiming physical significance.
+
+
+%=================================================================
+\section{IBM Quantum Experiments}\label{sec:ibm}
+%=================================================================
+
+\subsection{Setup}
+
+Experiments were performed on ibm\_marrakesh (156 superconducting qubits,
+Heron processor) using Qiskit~2.3.0 and the Sampler primitive.
+For each model and system size, we execute 5 independent runs at 4096
+shots per circuit, yielding 429 experimental data points. Job IDs are
+listed in the Supplemental Material.
+
+\subsection{Kicked Ising: IBM vs exact simulation}
+
+Table~\ref{tab:ibm_ki4} compares IBM results with exact simulation
+for the Kicked Ising model at $N = 4$.
+
+\begin{table}[h]
+\caption{Kicked Ising $N = 4$: IBM (5-run mean $\pm$ std) vs exact.}
+\label{tab:ibm_ki4}
+\begin{ruledtabular}
+\begin{tabular}{rcccc}
+$d$ & Exact & IBM mean & $\sigma$ & $\Delta$ \\
+\hline
+ 1 & 0.014 & 0.020 & 0.003 & +0.005 \\
+ 2 & 0.013 & 0.043 & 0.003 & +0.030 \\
+ 3 & 0.048 & 0.052 & 0.004 & +0.004 \\
+ 4 & 0.243 & 0.191 & 0.009 & $-$0.051 \\
+ 5 & 0.077 & 0.070 & 0.007 & $-$0.007 \\
+ 6 & 0.019 & 0.040 & 0.012 & +0.021 \\
+ 7 & 0.088 & 0.087 & 0.011 & $-$0.001 \\
+ 8 & 0.000 & 0.029 & 0.003 & +0.029 \\
+10 & 0.025 & 0.052 & 0.015 & +0.027 \\
+12 & 0.213 & 0.098 & 0.013 & $-$0.115 \\
+14 & 0.007 & 0.050 & 0.004 & +0.043 \\
+\end{tabular}
+\end{ruledtabular}
+\end{table}
+
+The recurrence structure is reproduced in hardware: the prominent
+revival at $d = 4$ ($C_\text{IBM} = 0.191 \pm 0.009$) and the
+secondary revival at $d = 7$ ($C_\text{IBM} = 0.087 \pm 0.011$)
+are clearly visible. The overall pattern correlation is Pearson
+$r = 0.91$, Spearman $\rho = 0.89$.
+
+At larger $N$, the IBM results confirm the scaling trend. For $N = 12$,
+the initial decay from $C(1) = 0.022$ to $C(3) = 0.002$ is resolved
+before the signal enters the noise floor at $d \geq 4$. For $N = 20$,
+the signal drops below shot-noise resolution by $d = 3$.
+
+\subsection{Integrable circuit: benchmark}
+
+The integrable (Clifford) circuit provides a stringent benchmark
+because its OTOC pattern is exactly known: $C = 0$ at depths
+$d = 1, 5, 7$ and $C = 0.5$ for all other measured depths (consistent
+with the Clifford circuit periodicity). IBM reproduces this with
+maximum deviation $0.018$ across all depths---the clearest validation
+that the protocol measures the intended quantity.
+
+\subsection{Model classification on hardware}
+
+Table~\ref{tab:omega} shows the scrambling residual $\Omega$ for all
+models.
+
+\begin{table}[h]
+\caption{Scrambling residual $\Omega = \langle C \rangle / C(0)$ from
+  exact simulation and IBM hardware.}
+\label{tab:omega}
+\begin{ruledtabular}
+\begin{tabular}{lccl}
+Model & $\Omega_\text{exact}$ & $\Omega_\text{IBM}$ & Regime \\
+\hline
+KI $N=20$    & 0.005 & 0.004 & Full scrambling \\
+KI $N=12$    & 0.006 & 0.007 & Full scrambling \\
+KI $N=8$     & 0.009 & 0.016 & Full scrambling \\
+KI $N=4$     & 0.136 & 0.133 & Strong scr. \\
+SYK $N=4$    & 0.173 & 0.180 & Intermediate \\
+Floquet $N=4$ & 0.357 & 0.268 & Intermediate \\
+Integ. $N=4$ & 0.727 & 0.726 & No scrambling \\
+\end{tabular}
+\end{ruledtabular}
+\end{table}
+
+The classification is fully consistent between simulation and hardware.
+The maximum discrepancy is $|\Delta\Omega| = 0.089$ (Floquet); for all
+other models, $|\Delta\Omega| < 0.01$. Figure~\ref{fig:classification}
+visualizes this comparison.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig3_classification.png}
+\caption{Scrambling classification: $\Omega$ for all models from exact
+  simulation (dark bars) and IBM hardware (blue bars). Background shading
+  indicates regime boundaries. The ordering is fully consistent between
+  simulation and experiment.}
+\label{fig:classification}
+\end{figure}
+
+\subsection{Noise floor analysis}
+
+The hardware noise floor for $C(d \geq 6)$ scales as approximately
+$1.5/2^N$: 0.059 ($N=4$), 0.005 ($N=8$), 0.0005 ($N=12$), consistent
+with depolarization toward the maximally mixed state. For $N = 20$,
+this floor falls below shot-noise resolution.
+Figure~\ref{fig:noisefloor} characterizes this scaling and decomposes
+the $N = 4$ signal into physical and noise contributions.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig4_noise_floor.png}
+\caption{Hardware noise floor characterization. (a)~Deep-circuit noise
+  floor $\langle C(d \geq 6)\rangle$ vs system size $N$, comparing IBM
+  (blue), exact simulation (black), and $1/2^N$ uniform noise (gray).
+  (b)~Signal-noise decomposition for KI $N = 4$: exact $C(d)$ (dark
+  bars) vs $|$IBM $-$ exact$|$ (pink bars). The dashed line marks
+  $1/2^4 = 0.0625$; signal dominates noise at recurrence peaks
+  ($d = 4, 7, 12$).}
+\label{fig:noisefloor}
+\end{figure*}
+
+
+%=================================================================
+\section{SYK Disorder Averaging}\label{sec:syk}
+%=================================================================
+
+The SYK model at $N = 4$ presents a qualitatively different route
+to suppressing finite-size recurrences: disorder averaging over
+random coupling realizations.
+
+\subsection{Convergence with number of seeds}
+
+We verify convergence of $\Omega$ with the number of disorder
+realizations in exact simulation. With 9 seeds, $\Omega = 0.179$
+is within 3.4\% of the 50-seed value ($\Omega = 0.173$), confirming
+that our IBM dataset (9 completed realizations,
+$\Omega_\text{IBM} = 0.180$) is sufficient for reliable classification.
+Single-seed values fluctuate widely ($\Omega$ ranges from 0.04 to 0.34),
+demonstrating that disorder averaging is essential.
+
+\subsection{Functional form of the decay}
+
+Unlike the Kicked Ising at $N = 20$, the disorder-averaged SYK at
+$N = 4$ does \emph{not} exhibit clean exponential decay. An
+exponential fit to the 50-seed average yields $R^2 = 0.61$, while
+a power-law fit gives $R^2 = 0.91$. Individual realizations are
+worse: the median single-seed exponential $R^2$ is 0.27, and only
+2 of 50 seeds achieve $R^2 > 0.9$.
+
+This is consistent with the expectation that the SYK model at finite
+$N$ does not saturate the MSS bound; exponential OTOC decay requires
+the large-$N$ limit. At $N = 4$, disorder averaging suppresses erratic
+recurrences but does not produce the sharp exponential characteristic
+of the thermodynamic limit.
+
+Crucially, the scrambling residual $\Omega$ correctly classifies SYK
+as intermediate scrambling ($\Omega = 0.173$) regardless of whether
+the decay is exponential, power-law, or neither. This reinforces the
+utility of $\Omega$ as a fit-free diagnostic independent of the
+functional form of $C(d)$.
+
+
+%=================================================================
+\section{Discussion}\label{sec:discussion}
+%=================================================================
+
+\subsection{Relation to prior work}
+
+Our findings connect to three lines of recent research.
+
+First, Craps et~al.\ \cite{Craps2020} showed that spin-1/2 Ising
+chains do not exhibit Lyapunov growth even at strongly chaotic
+parameters, with the exponential window opening only at higher spin
+$s$. We demonstrate the complementary mechanism: increasing $N$ at
+fixed $s = 1/2$ opens the same window via exponential suppression of
+Poincar\'e recurrences, rather than approach to the semiclassical
+limit. Together, these results establish that OTOC-based Lyapunov
+extraction requires \emph{either} large spin \emph{or} large system
+size.
+
+Second, Toga, Samlodia, and Kemper \cite{TogaSamlodiaKemper2025}
+recently demonstrated MSS bound saturation in an Ising model with
+site-dependent couplings derived from the AdS$_2$ metric---one of the
+few known examples with only local interactions. The connection
+between Ising-type models, emergent geometry, and maximal scrambling
+will be explored elsewhere.
+
+Third, and most directly relevant, Google Quantum AI
+\cite{GoogleEchoes2025} demonstrated measurement of second-order OTOCs
+(OTOC(2)) on 65 qubits of the Willow processor, achieving a 13{,}000$
+\times$ speedup over classical simulation and claiming verifiable
+quantum advantage. Their work confirms that scrambling diagnostics
+are experimentally accessible at large $N$ on current hardware. Our
+work addresses the complementary question: what is the \emph{minimum}
+system size required for meaningful OTOC-based scrambling measurement?
+While Google operated deep in the regime where scrambling is clean
+($N = 65$), we systematically map the transition from
+recurrence-dominated dynamics ($N = 4$) to clean exponential decay
+($N = 20$), establishing the boundary that separates these regimes.
+
+\subsection{Robustness of the exponential fit}
+
+The exponential fit $\lambda_L = 3.12 \pm 0.1$ ($R^2 = 0.97$) at
+$N = 20$ is obtained from 8 data points spanning more than 10 orders of magnitude
+in exact simulation. While the distinction from a power-law fit
+($R^2 = 0.93$) is suggestive, we note that with 8 points, statistical
+model selection (e.g., Bayesian information criterion) cannot
+conclusively distinguish exponential from stretched-exponential or
+power-law with logarithmic corrections. The key observation is not
+the precise functional form but the dramatic contrast with $N = 4$
+($R^2 \approx 0$): increasing $N$ transforms OTOC dynamics from
+incoherent oscillations to monotonic decay over many orders of
+magnitude.
+
+\subsection{What hardware can and cannot resolve}
+
+IBM experiments reproduce OTOC dynamics when signal exceeds the noise
+floor. The visibility of quantum recurrences at $N = 4$ (Pearson
+$r = 0.91$) confirms the protocol measures genuine quantum dynamics,
+not hardware artifacts. For $N \geq 12$, the signal enters the noise
+floor within 2--3 Floquet steps; the qualitative result (rapid decay)
+matches exact simulation, but the quantitative profile (exponential
+rate) cannot be resolved without error mitigation.
+
+We deliberately omit error mitigation techniques (ZNE, symmetry
+verification) in this study. For $N = 4$, the raw signal-to-noise
+ratio is sufficient to resolve recurrence structure. For $N \geq 12$,
+the exact signal at $d \geq 5$ is $O(10^{-6})$ or smaller---no
+currently available mitigation technique can recover a signal this
+far below the noise floor on 4096 shots. This represents a fundamental
+hardware limitation, not a methodological one.
+
+Resolving $C(d) \sim 10^{-5}$ at $d = 5$--$10$ for $N \geq 12$ would
+enable direct hardware verification of the exponential decay profile.
+This could be achieved through higher shot counts ($\sim 10^8$),
+improved gate fidelities, or protocols like OTOC(2)
+\cite{GoogleEchoes2025} that amplify the signal via constructive
+interference.
+
+\subsection{On the metric $\Omega$}
+
+The scrambling residual $\Omega = \langle C \rangle / C(0)$ is
+deliberately simple: it requires no fitting, no model assumptions, and
+is robust to shot noise. Styliaris, Anand, and Zanardi
+\cite{StyliarisAnandZanardi2021} derived the equilibration value of
+bipartite OTOCs from eigenstate entanglement for Haar-random unitaries;
+our $\Omega$ is the experimental realization of this quantity measured
+with fixed (Pauli $Z$) operators on real hardware, providing a
+practical diagnostic accessible on current NISQ devices. Syzranov
+et~al.\ \cite{SyzranovGorshkovGalitski2018} showed that in open
+systems, OTOCs saturate to a constant set by microscopic timescales,
+consistent with the finite $\Omega$ values we observe. Its main
+limitation is insensitivity to
+temporal structure---a system with monotonic decay and one with
+oscillations of the same average amplitude yield identical $\Omega$.
+For regime classification (integrable vs.\ chaotic), this suffices;
+for finer diagnostics, complementary measures such as spectral
+statistics or Krylov complexity \cite{Parker2019} are needed.
+
+That $\Omega > 0$ in unitary evolution reflects a fundamental property
+of quantum information: unitarity ($U^\dagger U = I$) guarantees that
+information is conserved and can only be redistributed, never
+destroyed. The no-hiding theorem \cite{BraunsteinPati2007} ensures that
+information absent from one subsystem must reside in another, providing
+a theoretical basis for the nonzero scrambling residual measured here.
+
+We emphasize that $\Omega$ diagnoses \emph{scrambling}---the
+delocalization of quantum information across a system's degrees of
+freedom---rather than quantum chaos in the strict sense. Scrambling
+is a broader concept: integrable systems with saddle-dominated dynamics
+can exhibit exponential OTOC growth without chaos
+\cite{Bhattacharjee2022}, while mixing non-chaotic regimes show
+power-law OTOC decay with no well-defined Ruelle--Pollicott resonance
+\cite{Znidaric2024}. In both cases, $\Omega$ remains well-defined
+and informative, providing a diagnostic of informational accessibility
+that is complementary to, and in some regimes more robust than,
+rate-based measures \cite{GarciaMata2026}.
+
+
+%=================================================================
+\section{Conclusion}\label{sec:conclusion}
+%=================================================================
+
+Finite Hilbert space recurrences are the primary obstacle to OTOC-based
+Lyapunov exponent extraction in small quantum systems. At $N = 4$, no
+exponential decay is observable, but the recurrence pattern is
+reproduced on IBM hardware with $r = 0.91$. At $N = 20$, exact
+simulation reveals clean exponential decay ($R^2 = 0.97$,
+$\lambda_L = 3.12 \pm 0.1$) over more than 10 orders of magnitude.
+
+The scrambling residual $\Omega$ provides a robust, fit-free diagnostic
+that correctly classifies dynamical regimes on both simulated and
+hardware data. The consistency between exact simulation and 429
+experimental data points on ibm\_marrakesh validates the protocol and
+establishes concrete benchmarks for NISQ-era scrambling experiments.
+
+Full details of hardware parameters, circuit structure, model
+parameters, job inventory, noise floor analysis, SYK convergence
+data, and code availability are provided in the Supplemental
+Material~\cite{supplemental}.
+
+\begin{acknowledgments}
+We acknowledge the use of IBM Quantum services. The views expressed
+are those of the author and do not reflect the official policy or
+position of IBM or the IBM Quantum team.
+\end{acknowledgments}
+
+\bibliography{kaelion}
+% NOTE: In Overleaf, place kaelion.bib in the same directory as this file
+% or at the project root. If using subdirectories, adjust path accordingly.
+% Original project path: ../../common/bibliography/kaelion
+
+\end{document}
